@@ -11,7 +11,7 @@ captured and stored in a message queue
 
 ```
 tree | set-clipboard
-```
+
 
 .
 ├── Dockerfile
@@ -25,3 +25,4 @@ tree | set-clipboard
 ├── main.go
 └── scripts
 └── releease.ps1
+```
