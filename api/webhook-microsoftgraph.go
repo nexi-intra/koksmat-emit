@@ -30,7 +30,7 @@ type Callback struct {
 	Value []WebhookEventStruct `json:"value"`
 }
 
-func validateSubscription(w http.ResponseWriter, r *http.Request) {
+func webhook_MicrosoftGraph(w http.ResponseWriter, r *http.Request) {
 
 	token := r.URL.Query().Get("validationToken")
 	if token != "" {

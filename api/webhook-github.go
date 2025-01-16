@@ -27,7 +27,7 @@ type GitHubWebhookOutput struct {
 	Status  string `json:"status"`
 }
 
-func GitHubWebhook() usecase.Interactor {
+func webhook_GitHub() usecase.Interactor {
 	// Create a new interactor for the webhook.
 
 	u := usecase.NewInteractor(func(ctx context.Context, input GitHubWebhookInput, output *GitHubWebhookOutput) error {
