@@ -1,0 +1,172 @@
+name: Release
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+on:
+  #  schedule:
+  #    - cron: '39 13 * * *'
+  push:
+    tags: ["v*.*.*"]
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository}}-app
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Workaround: https://github.com/docker/build-push-action/issues/461
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+  deploy:
+    if: false
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Generate Kubernetes manifest
+        shell: pwsh
+        run: |
+          $app_name = "${{ github.repository }}-${{ github.ref_name }}".Replace("/", "-")
+          $app_name | Out-File -FilePath appname.txt
+          $dnsname = "$app_name.${{ vars.DOMAIN }}"
+          $dnsname | Out-File -FilePath dnsname.txt
+          @"
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: $app_name
+              labels:
+                app: $app_name
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: $app_name
+              template:
+                metadata:
+                  labels:
+                    app: $app_name
+                spec:
+                  containers:
+                    - name: $app_name
+                      image: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+                      imagePullPolicy: Always
+                      ports:
+                        - containerPort: 4444
+                      env:
+                        - name: NATS
+                          value: nats://nats:4222
+                        - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+                          value: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+          "@ | Out-File -FilePath deployment.yml
+          @"
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: $app_name
+              labels:
+                app: $app_name
+                service: $app_name
+            spec:
+              ports:
+                - name: http
+                  port: 5301
+                  targetPort: 4444
+              selector:
+                app: $app_name
+          "@ | Out-File -FilePath service.yml
+          @"
+            apiVersion: networking.k8s.io/v1
+            kind: Ingress
+            metadata:
+              name: $app_name
+            spec:
+              rules:
+                - host: $dnsname
+                  http:
+                    paths:
+                      - path: /
+                        pathType: Prefix
+                        backend:
+                          service:
+                            name: $app_name
+                            port:
+                              number: 5301
+          "@ | Out-File -FilePath ingress.yml
+
+      - name: Log in to Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AKS context
+        run: |
+          az aks get-credentials --resource-group ${{ vars.AZURE_RG }} --name ${{ vars.AZURE_AKS }}
+
+      - name: Deploy to AKS
+        run: |
+          cat deployment.yml
+          kubectl apply -f deployment.yml -n ${{ vars.K8_NAMESPACE }}
+          cat service.yml
+          kubectl apply -f service.yml -n ${{ vars.K8_NAMESPACE }}
+          cat ingress.yml
+          kubectl apply -f ingress.yml -n ${{ vars.K8_NAMESPACE }}
+
+      - name: Restart Deployment
+        shell: pwsh
+        run: |
+          $app_name = Get-Content -Path appname.txt
+          kubectl rollout restart deployment/$app_name -n ${{ vars.K8_NAMESPACE }}

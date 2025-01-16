@@ -1,8 +1,8 @@
 {
   "version": {
     "minor": 0,
-    "build": 3,
-    "patch": 3,
+    "build": 4,
+    "patch": 4,
     "major": 0
   },
   "appname": "koksmat-emit"
