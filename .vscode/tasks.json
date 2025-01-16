@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Release",
+			"command": "pwsh",
+			
+			"args": [
+				"-F","release.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/scripts"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+
+	]
+}
