@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/nexi-intra/koksmat-emit/api"
 	"github.com/nexi-intra/koksmat-emit/internal/emitter"
@@ -77,12 +76,6 @@ var serveCmd = &cobra.Command{
 		}
 
 		obs.Info("Server exited gracefully")
-		fmt.Println("serve called")
-
-		for {
-			fmt.Println("This message prints every 10 seconds.")
-			time.Sleep(10 * time.Second)
-		}
 
 	},
 }
