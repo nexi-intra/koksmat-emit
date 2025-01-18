@@ -1,6 +1,7 @@
 ---
 title: Trigger GitHub Workflow
 chatgpt-prompt: like a go function that can trigger a github workflow
+chatgpt-model: o1-mini
 ---
 
 > like a go function that can trigger a github workflow

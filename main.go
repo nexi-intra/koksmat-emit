@@ -5,9 +5,10 @@ package main
 
 import (
 	"github.com/nexi-intra/koksmat-emit/cmd"
+	"github.com/nexi-intra/koksmat-emit/config"
 )
 
 func main() {
-	loadConfig()
+	config.Setup()
 	cmd.Execute()
 }

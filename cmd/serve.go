@@ -8,22 +8,75 @@ import (
 	"time"
 
 	"github.com/nexi-intra/koksmat-emit/api"
+	"github.com/nexi-intra/koksmat-emit/internal/emitter"
+	"github.com/nexi-intra/koksmat-emit/internal/observability"
 	"github.com/spf13/cobra"
+
+	"context"
+
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"go.uber.org/zap"
 )
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "A brief description of your command.",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Start the services.",
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		api.Start(":4321")
 
+		// Initialize Observability
+		obs, err := observability.NewObservability()
+		if err != nil {
+			fmt.Printf("Failed to initialize observability: %v\n", err)
+			os.Exit(1)
+		}
+		defer func() {
+			if err := obs.Shutdown(); err != nil {
+				obs.Error("Error during shutdown", zap.Error(err))
+			}
+		}()
+
+		// Initialize Application
+		app := emitter.NewApp(obs)
+
+		// Setup HTTP handlers
+		mux := app.Routes()
+
+		// Setup /metrics endpoint
+		mux.(*http.ServeMux).Handle("/metrics", obs.MetricsHandler)
+
+		// Start the server
+		server := &http.Server{
+			Addr:    ":8080",
+			Handler: mux,
+		}
+
+		// Graceful shutdown
+		go func() {
+			api.Start(":4321", app)
+			obs.Info("Starting server on :8080")
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				obs.Error("Server failed", zap.Error(err))
+			}
+
+		}()
+
+		// Wait for interrupt signal to gracefully shutdown the server
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+		obs.Info("Shutting down server...")
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			obs.Error("Server shutdown failed", zap.Error(err))
+		}
+
+		obs.Info("Server exited gracefully")
 		fmt.Println("serve called")
 
 		for {
@@ -36,14 +89,4 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// serveCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

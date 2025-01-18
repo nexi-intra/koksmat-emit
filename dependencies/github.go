@@ -1,4 +1,4 @@
-package emit
+package dependencies
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func triggerGitHubWorkflow(owner, repo, workflowID, ref string, inputs map[strin
 	return nil
 }
 
-func sample() {
+func sampleGithub() {
 	// Example usage
 	owner := "your-github-username"
 	repo := "your-repo-name"

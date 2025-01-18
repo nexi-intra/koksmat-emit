@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/nexi-intra/koksmat-emit/internal/emitter"
 	//"github.com/koksmat-com/koksmat/model"
 	//"github.com/magicbutton/magic-mix/model"
 )
@@ -43,35 +45,38 @@ type Callback struct {
 // Responses:
 //   - 200 OK: If the validation token is confirmed or the request body is successfully processed.
 //   - 400 Bad Request: If there is an error decoding the request body.
-func webhook_MicrosoftGraph(w http.ResponseWriter, r *http.Request) {
+func webhook_MicrosoftGraph(app *emitter.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	token := r.URL.Query().Get("validationToken")
-	if token != "" {
-		fmt.Println("Confirming subscription")
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
+		token := r.URL.Query().Get("validationToken")
+		if token != "" {
+			app.Obs.Info("Confirming subscription")
+
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			w.WriteHeader(200)
+			fmt.Fprint(w, token)
+			return
+		}
+
+		p := &Callback{}
+		err := json.NewDecoder(r.Body).Decode(&p)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Println(err)
+			return
+
+		}
+
+		for _, v := range p.Value {
+			fmt.Println(v)
+
+		}
+
 		w.WriteHeader(200)
-		fmt.Fprint(w, token)
-		return
-	}
-
-	p := &Callback{}
-	err := json.NewDecoder(r.Body).Decode(&p)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Println(err)
-		return
+		fmt.Fprint(w, "received")
 
 	}
-
-	for _, v := range p.Value {
-		fmt.Println(v)
-
-	}
-
-	w.WriteHeader(200)
-	fmt.Fprint(w, "received")
-
 }
 
 // func getWebHooks() usecase.Interactor {

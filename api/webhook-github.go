@@ -2,9 +2,10 @@ package api
 
 import (
 	"context"
-	"log"
 
+	"github.com/nexi-intra/koksmat-emit/internal/emitter"
 	"github.com/swaggest/usecase"
+	"go.uber.org/zap"
 )
 
 // GitHubWebhookInput defines the expected payload from GitHub webhook.
@@ -37,11 +38,11 @@ type GitHubWebhookOutput struct {
 // - Default: Responds with a message indicating the action is not handled.
 //
 // The interactor sets the title, description, and tags for the use case.
-func webhook_GitHub() usecase.Interactor {
+func webhook_GitHub(app *emitter.App) usecase.Interactor {
 	// Create a new interactor for the webhook.
 
 	u := usecase.NewInteractor(func(ctx context.Context, input GitHubWebhookInput, output *GitHubWebhookOutput) error {
-		log.Println("Hook", input.Action)
+		app.Obs.Info("Hook", zap.String("action", input.Action))
 
 		// Example logic: respond based on the action.
 		switch input.Action {
