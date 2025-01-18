@@ -22,6 +22,21 @@ RUN go mod download
 # Copy the entire project
 COPY . .
 
+# Run Go tests with coverage
+RUN go test -coverprofile=coverage.out ./... && \
+  go tool cover -func=coverage.out > coverage.txt
+
+# Optionally, enforce a minimum coverage percentage (e.g., 80%)
+# Uncomment the following lines to enforce coverage threshold
+# RUN COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//') && \
+#     if [ $(echo "$COVERAGE < 80" | bc) -eq 1 ]; then \
+#         echo "Coverage ($COVERAGE%) is below the required threshold (80%)"; \
+#         exit 1; \
+#     fi
+
+# Display the coverage summary in build logs
+RUN cat coverage.txt
+
 # Build the Go binary
 RUN go build -o koksmat-emit main.go
 

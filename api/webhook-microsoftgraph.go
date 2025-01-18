@@ -30,6 +30,19 @@ type Callback struct {
 	Value []WebhookEventStruct `json:"value"`
 }
 
+// webhook_MicrosoftGraph handles incoming HTTP requests for Microsoft Graph webhooks.
+// It performs validation of the subscription by checking for a "validationToken" query parameter.
+// If the token is present, it confirms the subscription by echoing the token back to the client.
+// If the token is not present, it decodes the request body into a Callback struct and processes the values.
+// It responds with a 200 status code and a "received" message upon successful processing.
+//
+// Parameters:
+//   - w: http.ResponseWriter to write the HTTP response.
+//   - r: *http.Request containing the HTTP request.
+//
+// Responses:
+//   - 200 OK: If the validation token is confirmed or the request body is successfully processed.
+//   - 400 Bad Request: If there is an error decoding the request body.
 func webhook_MicrosoftGraph(w http.ResponseWriter, r *http.Request) {
 
 	token := r.URL.Query().Get("validationToken")

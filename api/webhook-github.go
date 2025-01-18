@@ -27,6 +27,16 @@ type GitHubWebhookOutput struct {
 	Status  string `json:"status"`
 }
 
+// webhook_GitHub creates a new usecase.Interactor to handle GitHub webhook events.
+// It processes the webhook payload and responds based on the action specified in the input.
+//
+// Supported actions:
+// - "created": Responds with a message indicating a new issue or PR was opened.
+// - "opened": Responds with a message indicating a new issue or PR was opened.
+// - "closed": Responds with a message indicating an issue or PR was closed.
+// - Default: Responds with a message indicating the action is not handled.
+//
+// The interactor sets the title, description, and tags for the use case.
 func webhook_GitHub() usecase.Interactor {
 	// Create a new interactor for the webhook.
 
