@@ -73,6 +73,13 @@ func webhook_MicrosoftGraph(app *emitter.App) http.HandlerFunc {
 
 		}
 
+		data, err := json.Marshal(p)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+		app.SaveWebhook("microsoftgraph", string(data))
 		w.WriteHeader(200)
 		fmt.Fprint(w, "received")
 

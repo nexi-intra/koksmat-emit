@@ -2,10 +2,8 @@ package dependencies
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
-	"reflect"
 	"time"
 
 	natsutil "github.com/nexi-intra/koksmat-emit/dependencies/nats"
@@ -40,30 +38,32 @@ func (c *MicroService) Close() {
 	c.client.Close()
 }
 
-func (c *MicroService) Request(subject string, req interface{}, resp interface{}, timeout time.Duration) error {
+func (c *MicroService) Request(subject string, args []string, body string, timeout time.Duration) (*string, error) {
 	// Safety check: resp must be a pointer, or json.Unmarshal will fail
-	if reflect.ValueOf(resp).Kind() != reflect.Ptr {
-		return errors.New("resp argument must be a pointer")
+
+	type MyRequest struct {
+		Args    []string `json:"args"`
+		Body    string   `json:"body"`
+		Channel string   `json:"channel"`
 	}
+
+	req := MyRequest{Args: args, Body: body, Channel: "noma2"}
 
 	// Marshal the request into bytes (JSON in this example)
 	reqData, err := json.Marshal(req)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 	log.Println("Sending request", subject, string(reqData))
 	// Send the request to NATS
 	msg, err := c.client.Request(subject, reqData, timeout)
 	if err != nil {
-		return fmt.Errorf("NATS request failed: %w", err)
+		return nil, fmt.Errorf("NATS request failed: %w", err)
 	}
-	log.Println("Received response", string(msg.Data))
-	// Unmarshal the response into 'resp'
-	if err := json.Unmarshal(msg.Data, resp); err != nil {
-		return fmt.Errorf("failed to unmarshal response: %w", err)
-	}
+	responseData := string(msg.Data)
+	log.Println("Received response", responseData)
 
-	return nil
+	return &responseData, nil
 }
 
 type MyRequest struct {
@@ -84,22 +84,15 @@ func sample() {
 	}
 	defer service.Close()
 
-	// Prepare request
-	req := MyRequest{Message: "Hello Service", Args: []string{"query", "mix", "select 1"}}
-
-	// Prepare a variable to hold the response
-	// Note that we must pass a pointer: &resp
-	var resp MyResponse
-
 	// Make the request
-	err = service.Request("magic-mix.app", req, &resp, 5*time.Second)
+	result, err := service.Request("magic-mix.app", []string{"query", "mix", "select 1"}, "", 5*time.Second)
 	if err != nil {
 		fmt.Printf("Request failed: %v\n", err)
 		return
 	}
 
 	// We now have an unmarshaled response in 'resp'
-	fmt.Printf("Received reply: %+v\n", resp)
+	fmt.Printf("Received reply: %+v\n", result)
 
 	// Send a request
 
