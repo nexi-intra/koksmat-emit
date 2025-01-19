@@ -1,4 +1,4 @@
-package dependencies
+package services
 
 import (
 	"os"

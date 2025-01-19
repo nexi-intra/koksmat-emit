@@ -1,4 +1,4 @@
-package dependencies
+package services
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	natsutil "github.com/nexi-intra/koksmat-emit/dependencies/nats"
+	natsutil "github.com/nexi-intra/koksmat-emit/services/nats"
 	"github.com/spf13/viper"
 )
 

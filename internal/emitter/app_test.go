@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/nexi-intra/koksmat-emit/dependencies"
+	"github.com/nexi-intra/koksmat-emit/services"
 
 	"github.com/nexi-intra/koksmat-emit/internal/observability"
 	"go.uber.org/zap"
@@ -16,7 +16,7 @@ func TestApp_SaveWebhook(t *testing.T) {
 
 	type fields struct {
 		Obs *observability.Observability
-		Mix *dependencies.MicroService
+		Mix *services.MicroService
 	}
 	type args struct {
 		endpoint string

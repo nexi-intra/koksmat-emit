@@ -8,8 +8,8 @@ import (
 
 	"time"
 
-	"github.com/nexi-intra/koksmat-emit/dependencies"
 	"github.com/nexi-intra/koksmat-emit/internal/observability"
+	"github.com/nexi-intra/koksmat-emit/services"
 	"go.uber.org/zap"
 
 	"github.com/golang-jwt/jwt"
@@ -51,12 +51,12 @@ func CreateJWT(appDisplayName string) (string, error) {
 
 type App struct {
 	Obs *observability.Observability
-	Mix *dependencies.MicroService
-	// Other dependencies can be added here
+	Mix *services.MicroService
+	// Other services can be added here
 }
 
 func NewApp(obs *observability.Observability) *App {
-	mixClient, err := dependencies.NewMicroserviceConnection()
+	mixClient, err := services.NewMicroserviceConnection()
 	if err != nil {
 		obs.Error("Failed to connect to MagicMix", zap.Error(err))
 		return nil
@@ -64,7 +64,7 @@ func NewApp(obs *observability.Observability) *App {
 	return &App{
 		Obs: obs,
 		Mix: mixClient,
-		// Initialize other dependencies here
+		// Initialize other services here
 	}
 }
 
@@ -130,7 +130,7 @@ func (a *App) SaveWebhook(endpoint string, body string) error {
 		a.Obs.Error("Failed to save webhook", zap.Error(err))
 		return err
 	}
-	a.Obs.Info("Webhook saved", zap.String("result", *result))
+	a.Obs.Verbose("Webhook saved", zap.String("result", *result))
 
 	return nil
 }
